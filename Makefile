@@ -7,12 +7,15 @@ CFLAGS = -c -Wall -x c -I ./include/ -O2 -ffunction-sections -fdata-sections -fu
 
 all : build
 
-build : err.o sock.o main.o
-	$(CC) $(G) lib/error.o lib/sock.o lib/main.o -o bin/tarea-lab6
-	chmod 774 bin/tarea-lab6
+build : bin.o erres.o sock.o err.o
+	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/erres.o -o bin/error_restoring
+	chmod 774 bin/error_restoring
 
-main.o :
-	$(CC) $(CFLAGS) $(G) src/main.c -o lib/main.o
+bin.o :
+	$(CC) $(CFLAGS) $(G) src/binary_converter.c -o lib/dectobin.o
+
+erres.o :
+	$(CC) $(CFLAGS) $(G) src/err_restoring.c -o lib/err_restoring.o
 
 sock.o :
 	$(CC) $(CFLAGS) $(G) src/socket.c -o lib/sock.o
@@ -26,6 +29,4 @@ clean :
 cleanall :
 	rm -f bin/* lib/*
 
-exec :
-	bin/tarea-lab6
 

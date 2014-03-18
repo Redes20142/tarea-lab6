@@ -22,7 +22,7 @@ void itobin(unsigned short int bitnum, long long number, char *res,
 	if(bitnum != 16 && bitnum != 32 && bitnum != 64)
 	{
 		printf("itobin: Error. No se reconoce el n\u00FAmero de bits ");
-		printf("del entero a convertir a binario");
+		printf("del entero a convertir a binario\n");
 		return;
 	}//comprueba que el número de bits dado esté en el rango esperado
 	unsigned short int sign;
@@ -63,7 +63,7 @@ void itobin(unsigned short int bitnum, long long number, char *res,
 		strcat(res, "0");
 		i--;
 	}//rellena con 0
-	strrev(aux);
+	strrev(res);
 	if(sign)
 	{
 		sign = 0;
@@ -108,7 +108,7 @@ short int bintos(char *binstr)
 {
 	if(strlen(binstr) < 16)
 	{
-		printf("La cadena debe tener al menos 16 caracteres de longitud");
+		printf("La cadena debe tener al menos 16 caracteres de longitud\n");
 		return -1;
 	}//si la cadena no tiene una longitud válida
 	short int result = 0;
@@ -137,7 +137,7 @@ int bintoi(char *binstr)
 {
 	if(strlen(binstr) < 32)
 	{
-		printf("La cadena debe tener al menos 32 caracteres de longitud");
+		printf("La cadena debe tener al menos 32 caracteres de longitud\n");
 		return -1;
 	}//si la cadena no tiene una longitud válida
 	int result = 0;
@@ -166,7 +166,7 @@ long long int bintol(char *binstr)
 {
 	if(strlen(binstr) < 64)
 	{
-		printf("La cadena debe tener al menos 64 caracteres de longitud");
+		printf("La cadena debe tener al menos 64 caracteres de longitud\n");
 		return -1;
 	}//si la cadena no tiene una longitud válida
 	int result = 0;

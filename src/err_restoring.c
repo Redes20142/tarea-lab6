@@ -18,13 +18,15 @@ void parse_args(char *, char *);
 float prob;
 unsigned short int packlose;
 unsigned short int rettime;
+char *window[5];//ventana
+unsigned short int current_buffer = 0;
 
 /*
  * Instancia un receptor de retroceso-N
  */
 int main(int argc, char *argv[])
 {
-	unsigned short int aux;
+	unsigned short int i;
 	if(argc != 7)
 	{
 		printf("Debe proporcionar exactamente 6 argumentos al programa.\n");
@@ -34,21 +36,25 @@ int main(int argc, char *argv[])
 		printf("\t* -p es la probabilidad de una p\u00E9rdida al recibir");
 		printf(" un paquete nuevo y su valor es alguno de los siguientes: ");
 		printf("0.01, 0.001, 0.0001\n");
-		printf("\t* -P es el n\u00FAmero de paquetes consecutivos perdidos ";
+		printf("\t* -P es el n\u00FAmero de paquetes consecutivos perdidos ");
 		printf("en el evento de que ocurra una p\u00E9rdida. Puede tener ");
 		printf("alguno de los siguientes valores: 1, 2, 3\n");
 		printf("\t* -t Es el tiempo de retazo que puede ocurrir con ");
 		printf("probabilidad -p. Puede ser alguno de los siguientes: 2, 3");
 		printf("; y son multiplos del promedio del tiempo de entrega\n");
+		exit(EXIT_FAILURE);
 	}//verifica los argumentos
-	for(aux = 1; aux < 7; aux += 2)
+	for(i = 1; i < 7; i += 2)
 	{
-		parse_args(argv[aux], argv[aux +1]);
+		parse_args(argv[i], argv[i +1]);
 	}//inicializa el programa conforme a los parámetros de usuario
+	for(i = 0; i < 5; i++)
+	{
+		window[i] = malloc(sizeof(char *) *1024);
+	}//inicializa las ventanas
 	int sender = createsocketserver(6660, 5, 0);
 	int socket = acceptsocket(sender);
-	char *buffer[1024];
-	char *aux[512];
+	char aux[512];
 	unsigned long long int totreceived = 0; //in a galaxy far far away....
 	unsigned short int lossocurred = 0;
 	srand(time(NULL));
@@ -62,13 +68,16 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		time(&inittime);
-		if(0 > readsocket(socket, buffer, 1024))
+		memset(window[current_buffer], 0, 1024);
+		if(read(socket, window[current_buffer], 1024) <	 0)
 		{
+			printf("Error en la lectura del socket\n");
 			exit(EXIT_FAILURE);
 		}//comprueba que no haya errores
+		printf("Recibio: %s\n", window[current_buffer]);
 		time(&finaltime);
 		ptime = (ptime + (finaltime -inittime)) /(totreceived +1);
-		if(((rand() %1001) /1000) <= p)
+		if(((rand() %1001) /1000) <= prob)
 		{
 			lossocurred = 1;
 			continue;
@@ -82,30 +91,30 @@ int main(int argc, char *argv[])
 		{
 			lossocurred = 0;
 		}//pierde varios paquetes simultáneos
-		if(((rand() %1001) /1000) <= p)
+		if(((rand() %1001) /1000) <= prob)
 		{
 			waiter.tv_nsec = (int) (ptime *rettime *100000);
 			nanosleep(&waiter, NULL);
 		}//si ocurre un retraso
-		buffer += 32;
-		secuence = bintoi(buffer);
-		buffer += 32;
-		if(buffer[0] == '1')
+		window[current_buffer] += 32;
+		secuence = bintoi(window[current_buffer]);
+		window[current_buffer] += 32;
+		if(window[current_buffer][0] == '1')
 		{
 			execvp(argv[0], argv);
 		}//hace un reset de la conexión
-		if(buffer[1] == '1')
+		if(window[current_buffer][1] == '1')
 		{
 			close(socket);
 			exit(EXIT_SUCCESS);
 		}//si fin era 1
-		/*if(buffer[2] == '0')
+		/*if(window[current_buffer][2] == '0')
 		{
 			printf("LOL!");FIXME LOL!
 		}//si SYN era 0*/
-		buffer += 20;
-		checksum = bintos(buffer);
-		if((((secuence +1024) | checksum) != 0) || (((rand() %1001) /1000) <= p))
+		window[current_buffer] += 20;
+		checksum = bintos(window[current_buffer]);
+		if((((secuence +1024) | checksum) != 0) || (((rand() %1001) /1000) <= prob))
 		{
 			printf("Se recibi\u00F3 un paquete da\u00F1ado\n");
 			damagedp++;
@@ -120,19 +129,26 @@ int main(int argc, char *argv[])
 		{
 			damagedp = 0;
 		}//recibe varios paquetes dañados varios paquetes simultáneos
-		itobin(32, totreceived, buffer, 1024);
+		itobin(32, totreceived, window[current_buffer], 1024);
 		itobin(32, totreceived, aux, 512);
-		strcat(buffer, aux);
-		strcat(buffer, "1001");
+		strcat(window[current_buffer], aux);
+		strcat(window[current_buffer], "1001");
 		itobin(16, 1024, aux, 512);
-		strcat(buffer, aux);
+		strcat(window[current_buffer], aux);
 		//el checksum va a ser la suma de totreceived +1024
 		itobin(16, (totreceived +1024) *(-1), aux, 512);
-		strcat(buffer, aux);
-		writesocket(socket, buffer, 1024);
-		writesocket(socket, buffer, 1024);
+		strcat(window[current_buffer], aux);
+		writesocket(socket, window[current_buffer], 1024);
 		totreceived++;
 		printf("Tiempo promedio de viaje de paquetes: %f\n", ptime);
+		if(current_buffer < 5)
+		{
+			current_buffer++;
+		}
+		else
+		{
+			current_buffer = 0;
+		}//si el buffer se llena, cicla
 	}//se comunica con el cliente
 	close(socket);
 	return 0;
@@ -147,7 +163,7 @@ void parse_args(char *arg, char *val)
 {
 	if(strcmp(arg, "-p") == 0) {
 		prob = strtof(val, NULL);
-		if(prob != 0.01 && prob != 0.001 && prob != 0.0001)
+		if((prob != ((float) 0.01)) && (prob != ((float) 0.001)) && (prob != ((float) 0.0001)))
 		{
 			printf("-p Debe estar asociado a un flotante con alguno de los ");
 			printf("valores siguientes: 0.01, 0.001, 0.0001\n");

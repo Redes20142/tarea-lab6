@@ -8,7 +8,7 @@ CFLAGS = -c -Wall -x c -I ./include/ -O2 -ffunction-sections -fdata-sections -fu
 all : build
 
 build : bin.o erres.o sock.o err.o
-	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/erres.o -o bin/error_restoring
+	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/err_restoring.o -o bin/error_restoring
 	chmod 774 bin/error_restoring
 
 bin.o :

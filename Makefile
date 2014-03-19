@@ -7,21 +7,25 @@ CFLAGS = -c -Wall -x c -I ./include/ -O2 -ffunction-sections -fdata-sections -fu
 
 all : build
 
-build : bin.o erres.o sock.o err.o
-	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/err_restoring.o -o bin/error_restoring
+build : bin.o n_ret.o sock.o err.o rep.o
+	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/n_ret.o -o bin/n_retroceso
+	$(CC) $(G) lib/dectobin.o lib/error.o lib/sock.o lib/rep.o -o bin/repeticion_selectiva
 	chmod 774 bin/error_restoring
 
 bin.o :
 	$(CC) $(CFLAGS) $(G) src/binary_converter.c -o lib/dectobin.o
 
-erres.o :
-	$(CC) $(CFLAGS) $(G) src/err_restoring.c -o lib/err_restoring.o
+n_ret.o :
+	$(CC) $(CFLAGS) $(G) src/n_retroceso.c -o lib/n_ret.o
 
 sock.o :
 	$(CC) $(CFLAGS) $(G) src/socket.c -o lib/sock.o
 
 err.o :
 	$(CC) $(CFLAGS) $(G) src/error.c -o lib/error.o
+
+rep.o :
+	$(CC) $(CFLAGS) $(G) src/rep_select.c -o lib/rep.o
 
 clean :
 	rm -f bin/*

@@ -80,11 +80,13 @@ int main(int argc, char *argv[])
 		if(((rand() %1001) /1000) <= prob)
 		{
 			lossocurred = 1;
+			writesocket(socket, "", 1024);
 			continue;
 		}//si se ha cubierto el rango de probabilidad de errores
 		if((lossocurred > 0) && (lossocurred < packlose))
 		{
 			lossocurred++;
+			writesocket(socket, "", 1024);
 			continue;
 		}
 		else
@@ -118,11 +120,13 @@ int main(int argc, char *argv[])
 		{
 			printf("Se recibi\u00F3 un paquete da\u00F1ado\n");
 			damagedp++;
+			writesocket(socket, "", 1024);
 			continue;
 		}//si recibe un paquete dañado
 		if((damagedp > 0) && (damagedp < packlose))
 		{
 			damagedp++;
+			writesocket(socket, "", 1024);
 			continue;
 		}
 		else

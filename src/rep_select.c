@@ -21,6 +21,8 @@ unsigned short int rettime;
 char *window[8];//ventana
 unsigned short int current_buffer = 0;
 unsigned short int window_size;
+short int occuped_windows[8];
+unsigned short int data_size = 0;
 
 /*
  * Instancia un receptor de retroceso-N
@@ -55,6 +57,7 @@ int main(int argc, char *argv[])
 	for(i = 0; i < window_size; i++)
 	{
 		window[i] = malloc(sizeof(char *) *1024);
+		occuped_windows[i] = -1;
 	}//inicializa las ventanas
 	int sender = createsocketserver(6660, 5, 0);//se pone satánica la cosa
 	int socket = acceptsocket(sender);
@@ -68,6 +71,7 @@ int main(int argc, char *argv[])
 	waiter.tv_sec = 0;
 	unsigned short int checksum;
 	unsigned int secuence;
+	unsigned int next_expected;
 	unsigned short int damagedp = 0;
 	while(1)
 	{
@@ -84,11 +88,13 @@ int main(int argc, char *argv[])
 		if(((rand() %1001) /1000) <= prob)
 		{
 			lossocurred = 1;
+			writesocket(socket, "", 1024);
 			continue;
 		}//si se ha cubierto el rango de probabilidad de errores
 		if((lossocurred > 0) && (lossocurred < packlose))
 		{
 			lossocurred++;
+			writesocket(socket, "", 1024);
 			continue;
 		}
 		else
@@ -100,9 +106,8 @@ int main(int argc, char *argv[])
 			waiter.tv_nsec = (int) (ptime *rettime *100000);
 			nanosleep(&waiter, NULL);
 		}//si ocurre un retraso
-		window[current_buffer] += 32;
 		secuence = bintoi(window[current_buffer]);
-		window[current_buffer] += 32;
+		window[current_buffer] += 64;
 		if(window[current_buffer][0] == '1')
 		{
 			execvp(argv[0], argv);
@@ -122,11 +127,13 @@ int main(int argc, char *argv[])
 		{
 			printf("Se recibi\u00F3 un paquete da\u00F1ado\n");
 			damagedp++;
+			writesocket(socket, "", 1024);
 			continue;
 		}//si recibe un paquete dañado
 		if((damagedp > 0) && (damagedp < packlose))
 		{
 			damagedp++;
+			writesocket(socket, "", 1024);
 			continue;
 		}
 		else
@@ -134,8 +141,42 @@ int main(int argc, char *argv[])
 			damagedp = 0;
 		}//recibe varios paquetes dañados varios paquetes simultáneos
 		itobin(32, totreceived, window[current_buffer], 1024);
-		itobin(32, totreceived, aux, 512);
+		itobin(32, secuence, aux, 512);
 		strcat(window[current_buffer], aux);
+		if(secuence == next_expected)
+		{
+			next_expected++;
+			for(i = 0; i < window_size; i++)
+			{
+				if(occuped_windows[i] == next_expected)
+				{
+					next_expected++;
+					i = 0;
+					occuped_windows[i] = -1;
+					data_size--;
+					continue;
+				}//si se encuentra el siguiente en las ventanas lo "sube a la app"
+			}//busca en el buffer el siguiente paquete esperado
+		}
+		else if(data_size < window_size -1)
+		{
+			occuped_windows[i] = secuence;
+			data_size++;
+			do
+			{
+				current_buffer++;
+				if(current_buffer >= window_size)
+				{
+					current_buffer = 0;
+				}//si el buffer actual se sale del arreglo
+			}//busca el proximo espacio vacio
+			while(occuped_windows[current_buffer] != -1);
+		}
+		else
+		{
+			writesocket(socket, "", 1024);
+			continue;
+		}//si la secuencia es la esperada y si es posible almacenarla en otro caso
 		strcat(window[current_buffer], "1001");
 		itobin(16, 1024, aux, 512);
 		strcat(window[current_buffer], aux);
@@ -145,11 +186,6 @@ int main(int argc, char *argv[])
 		writesocket(socket, window[current_buffer], 1024);
 		totreceived++;
 		printf("Tiempo promedio de viaje de paquetes: %f\n", ptime);
-		/*
-		 * TODO aquí falta definir con propiedad cómo se va a manejar la
-		 * repetición selectiva; ya que no se van a desechar simplemente
-		 * paquetes cómo en repetición-N
-		 */
 		if(current_buffer < window_size)
 		{
 			current_buffer++;
